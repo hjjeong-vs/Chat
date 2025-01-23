@@ -1,0 +1,38 @@
+﻿<Window x:Class="Chat.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Chat"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="450" Width="800">
+    <Window.DataContext>
+        <local:MainViewModel/>
+    </Window.DataContext>
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="551*"/>
+            <ColumnDefinition Width="249*"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="38*" />
+            <RowDefinition Height="4*" />
+        </Grid.RowDefinitions>
+
+        <ListBox ItemsSource="{Binding Messages}" Grid.Row="0" />
+        <StackPanel Orientation="Vertical" Grid.Row="0" Grid.Column="1" >
+            <Image Source="/user.png" Height="197" Width="155" />
+            <Label Content="{Binding LabelName}" Width="100" FontWeight="Bold" FontSize="18" />
+            <TextBox x:Name="tbName" Text="{Binding InputName, UpdateSourceTrigger=PropertyChanged}" Width="200" 
+                     KeyDown="TextBox_KeyDown"/>
+            <Button Content="닉네임 변경" Command="{Binding UpdateNicknameCommand}" Width="199"  />
+            <ListBox ItemsSource ="{Binding ClientList}" Height="120" Margin="10, 10, 10, 0"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Grid.Row="1" >
+            <TextBox x:Name="tbMessage" Text="{Binding MessageToSend, UpdateSourceTrigger=PropertyChanged}" Width="350" Margin="0"
+                     KeyDown="TextBox_KeyDown" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Visible"/>
+            <Button Content="Send" Command="{Binding SendMessageCommand}" Width="100" />
+            <Button Content="Image" Command="{Binding SendImageCommand}" Width="100" />
+        </StackPanel>
+    </Grid>
+</Window>
