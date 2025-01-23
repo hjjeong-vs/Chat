@@ -9,7 +9,11 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Text.Json;
+using Microsoft.Win32;
 using static System.Runtime.InteropServices.JavaScript.JSType;
+using System.Windows;
+using System.IO;
+using System.Windows.Media.Imaging;
 
 namespace Chat
 {
@@ -60,7 +64,7 @@ namespace Chat
             mainSock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             mainSock.Connect("127.0.0.1", 12345);
 
-            var obj = new AsyncObject(1024);
+            var obj = new AsyncObject(5000);
             obj.WorkingSocket = mainSock;
             mainSock.BeginReceive(obj.Buffer, 0, obj.BufferSize, 0, DataReceived, obj);
         }
@@ -83,7 +87,15 @@ namespace Chat
                         strMessage += packet.Message.TrimEnd();
                         break;
 
-                    case (int)C_TYPE.IMAGE:            
+                    case (int)C_TYPE.IMAGE:
+                        strMessage = "[" + packet.date.ToString("yyyy-MM-dd HH:mm:ss") + "] ";
+                        strMessage += packet.Name.Trim() + ": ";
+                        strMessage += "이미지 저장";
+
+                        BitmapImage bit = Base64ToImage(packet.Message);
+                        string currentPath = AppDomain.CurrentDomain.BaseDirectory;
+
+                        SaveBitmapImage(bit, currentPath + "image" + DateTime.Now.ToString("yyyyMMddHHmmss") + ".jpg");
                         break;
 
                 }
@@ -99,20 +111,29 @@ namespace Chat
 
             obj.WorkingSocket.BeginReceive(obj.Buffer, 0, obj.BufferSize, 0, DataReceived, obj);
         }
-
+        private void SaveBitmapImage(BitmapImage bitmapImage, string filePath)
+        {
+            BitmapFrame frame = BitmapFrame.Create(bitmapImage);
+            BitmapEncoder encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(frame);
+            using (var fileStream = new FileStream(filePath, FileMode.Create))
+            {
+                encoder.Save(fileStream);
+            }
+        }
         public void SendMessage()
         {
             if (string.IsNullOrWhiteSpace(MessageToSend)) return;
 
-            var data = MakeSendMessage(MessageToSend);
+            var data = MakeSendMessage(MessageToSend, (int)C_TYPE.MESSAGE);
             mainSock.Send(data);
             MessageToSend = "";
         }
 
-        private byte[] MakeSendMessage(string strMsg)
+        private byte[] MakeSendMessage(string strMsg, int cType)
         {
             MessagePacket packet = new MessagePacket();
-            packet.type = (int)C_TYPE.MESSAGE;
+            packet.type = cType;
             packet.Message = strMsg;
             packet.Name = LabelName;
             packet.date = DateTime.Now;
@@ -125,11 +146,44 @@ namespace Chat
 
         }
 
+        private string ImageToBase64(string imagePath)
+        {
+            byte[] imageBytes = File.ReadAllBytes(imagePath);
+
+            string base64String = Convert.ToBase64String(imageBytes);
+
+            return base64String;
+        }
+
+        private BitmapImage Base64ToImage(string base64String)
+        {
+            // Base64 문자열을 byte 배열로 변환
+            byte[] imageBytes = Convert.FromBase64String(base64String);
+
+            // MemoryStream을 이용해 BitmapImage 생성
+            using (var memoryStream = new MemoryStream(imageBytes))
+            {
+                var bitmap = new BitmapImage();
+                bitmap.BeginInit();
+                bitmap.StreamSource = memoryStream;
+                bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                bitmap.EndInit();
+                return bitmap;
+            }
+        }
+
         private void SendImage()
         {
-            var imageBytes = System.IO.File.ReadAllBytes("path_to_image.jpg"); // Replace with OpenFileDialog
-            var data = Encoding.UTF8.GetBytes("[IMAGE]" + Convert.ToBase64String(imageBytes));
-            mainSock.Send(data);
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+            openFileDialog.Filter = "Image Files (*.png;*.jpg;*.jpeg)|*.png;*.jpg;*.jpeg|All Files (*.*)|*.*";
+            if (openFileDialog.ShowDialog() == true)
+            {
+                string selectedFilePath = openFileDialog.FileName;
+                string strBase64 = ImageToBase64(selectedFilePath);
+                var data = MakeSendMessage(strBase64, (int)C_TYPE.IMAGE);
+                mainSock.Send(data);
+            }
+           
         }
 
         private string _inputName = "익명";

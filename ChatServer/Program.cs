@@ -61,7 +61,7 @@ namespace ChatServer
             connectedClients.Add(clientSocket);
             Console.WriteLine($"Client connected: {clientSocket.RemoteEndPoint}");
 
-            var asyncObj = new AsyncObject(1024);
+            var asyncObj = new AsyncObject(5000);
             asyncObj.WorkingSocket = clientSocket;
             clientSocket.BeginReceive(asyncObj.Buffer, 0, asyncObj.BufferSize, 0, ReceiveCallback, asyncObj);
 
@@ -99,13 +99,13 @@ namespace ChatServer
                         break;
 
                     case (int)C_TYPE.IMAGE:
-                        string base64Image = text.Substring(7);
+                        string base64Image = packet.Message;
                         Console.WriteLine("Received an image.");
 
                         // Decode and save the image
                         byte[] imageBytes = Convert.FromBase64String(base64Image);
                         System.IO.File.WriteAllBytes($"received_{DateTime.Now.Ticks}.jpg", imageBytes);
-                        BroadcastMessage("A client sent an image.");
+                        BroadcastMessage(text);
                         break;
 
                     case (int)C_TYPE.LIST:
